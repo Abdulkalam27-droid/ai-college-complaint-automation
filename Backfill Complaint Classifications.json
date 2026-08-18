@@ -1,0 +1,421 @@
+{
+  "name": "Backfill Complaint Classifications",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c57f130c-146d-4bc7-946e-fb8752219835",
+      "name": "Run Backfill",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1x1N_XYBV-QoOZsBKgE5Lvy6TQt_T2qxTPgrD-eBG2Tc",
+          "mode": "list",
+          "cachedResultName": " College Complaint Portal  (Responses)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1x1N_XYBV-QoOZsBKgE5Lvy6TQt_T2qxTPgrD-eBG2Tc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1907414216,
+          "mode": "list",
+          "cachedResultName": "Form responses 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1x1N_XYBV-QoOZsBKgE5Lvy6TQt_T2qxTPgrD-eBG2Tc/edit#gid=1907414216"
+        },
+        "options": {}
+      },
+      "id": "55e5b4cf-b1ad-4bb3-a27d-b7a39b4fc636",
+      "name": "Read All Rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        144
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "I5yV9RnvpgBL1SWx",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-complaint",
+              "leftValue": "={{ $json['  Complaint  '] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "no-department",
+              "leftValue": "={{ $json[' Department '] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ba901920-26f7-40db-a7ca-eec22a5597ce",
+      "name": "Needs Filling",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "models/gemini-3.6-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a college complaint classification AI.\\n\\nAnalyze the student's complaint and return ONLY JSON, no extra text:\\n\\n{\\n  \"department\": \"\",\\n  \"category\": \"\",\\n  \"priority\": \"\",\\n  \"summary\": \"\",\\n  \"recommended_action\": \"\"\\n}\\n\\nRules:\\n- department must be ONLY one of: ADMIN, CSE, ECE, EEE, MECH, HOSTEL\\n  (Use ADMIN for water, electricity, cleanliness, plumbing, maintenance, or campus facility issues)\\n- priority must be one of: LOW, MEDIUM, HIGH, CRITICAL\\n- summary: one short sentence describing the complaint\\n- category: a short label (e.g. Maintenance, Academic, Transport, Hostel)\\n- recommended_action: a short actionable step\\n\\nStudent complaint: {{ $json['  Complaint  '] }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "d981f989-4ba2-484a-bee0-cf5ab9b07589",
+      "name": "Message a model",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        0
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VnvvayuTP3ryBHgP",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1x1N_XYBV-QoOZsBKgE5Lvy6TQt_T2qxTPgrD-eBG2Tc",
+          "mode": "list",
+          "cachedResultName": " College Complaint Portal  (Responses)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1x1N_XYBV-QoOZsBKgE5Lvy6TQt_T2qxTPgrD-eBG2Tc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1907414216,
+          "mode": "list",
+          "cachedResultName": "Form responses 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1x1N_XYBV-QoOZsBKgE5Lvy6TQt_T2qxTPgrD-eBG2Tc/edit#gid=1907414216"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $(\"Process One at a Time\").item.json.Timestamp }}",
+            " Department ": "={{ JSON.parse($json.content.parts[0].text).department }}",
+            "Category": "={{ JSON.parse($json.content.parts[0].text).category }}",
+            "Priority ": "={{ JSON.parse($json.content.parts[0].text).priority }}",
+            "Summary": "={{ JSON.parse($json.content.parts[0].text).summary }}",
+            "Recommended Action": "={{ JSON.parse($json.content.parts[0].text).recommended_action }}"
+          },
+          "matchingColumns": [
+            "Timestamp"
+          ],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Student Name",
+              "displayName": "Student Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "  Register Number  ",
+              "displayName": "  Register Number  ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "  Email  ",
+              "displayName": "  Email  ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "  Complaint  ",
+              "displayName": "  Complaint  ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "  Location  ",
+              "displayName": "  Location  ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Complaint Type",
+              "displayName": "Complaint Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": " Department ",
+              "displayName": " Department ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Priority ",
+              "displayName": "Priority ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Recommended Action",
+              "displayName": "Recommended Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "98d0f99b-322c-420a-92e6-bcb2d05b76f6",
+      "name": "Update Row in Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1120,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "I5yV9RnvpgBL1SWx",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "3367f12b-87cc-43dc-90d9-9a316d86952c",
+      "name": "Rate Limit Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1344,
+        80
+      ],
+      "webhookId": "7f41df34-83c5-4e27-84cd-93f1bab5aa19"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "27b27164-6fa6-4f67-b04c-2a7d49961320",
+      "name": "Process One at a Time",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        448,
+        144
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Backfill": {
+      "main": [
+        [
+          {
+            "node": "Read All Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read All Rows": {
+      "main": [
+        [
+          {
+            "node": "Process One at a Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Filling": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process One at a Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Update Row in Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Row in Sheet": {
+      "main": [
+        [
+          {
+            "node": "Rate Limit Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit Wait": {
+      "main": [
+        [
+          {
+            "node": "Process One at a Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process One at a Time": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Needs Filling",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d22c5bc5-4d6f-4918-83aa-f39b19232329",
+  "meta": {
+    "instanceId": "6db9aec552c5dfe3db41f609d37cf31d4dbe4808882c93c56c418ad55d588393"
+  },
+  "nodeGroups": [],
+  "id": "dWDYTe2vHlpfHhsr",
+  "tags": []
+}
